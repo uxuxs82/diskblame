@@ -6,6 +6,7 @@ import sqlite3
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 from . import __version__, db, scan, why
@@ -154,8 +155,13 @@ def snapshot_dict(row):
     return {key: row[key] for key in row.keys()}
 
 
+@contextmanager
 def open_db(config):
-    return db.connect(config.db_path)
+    conn = db.connect(config.db_path)
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def resolve_filter(path):
@@ -283,26 +289,29 @@ def cmd_snap(args, config, color):
         min_file_size=min_file_size,
         follow_symlinks=follow_symlinks,
     )
-    conn = open_db(config)
-    created_at = time.time()
-    snapshot_id = db.insert_snapshot(
-        conn,
-        created_at,
-        result.root,
-        result.total_size,
-        result.total_files,
-        result.total_dirs,
-        result.elapsed_ms,
-        result.skipped,
-        __version__,
-        result.dirs,
-        result.files,
-    )
-    snapshot = db.get_snapshot(conn, snapshot_id)
-    previous = db.previous_snapshot(conn, snapshot)
-    delta = result.total_size - previous["total_size"] if previous else None
-    db_size = db.database_size(conn)
-    conn.close()
+    snapshot = None
+    previous = None
+    delta = None
+    db_size = 0
+    with open_db(config) as conn:
+        created_at = time.time()
+        snapshot_id = db.insert_snapshot(
+            conn,
+            created_at,
+            result.root,
+            result.total_size,
+            result.total_files,
+            result.total_dirs,
+            result.elapsed_ms,
+            result.skipped,
+            __version__,
+            result.dirs,
+            result.files,
+        )
+        snapshot = db.get_snapshot(conn, snapshot_id)
+        previous = db.previous_snapshot(conn, snapshot)
+        delta = result.total_size - previous["total_size"] if previous else None
+        db_size = db.database_size(conn)
 
     if args.json:
         payload = {
@@ -332,43 +341,50 @@ def cmd_snap(args, config, color):
 
 
 def cmd_diff(args, config, color):
-    conn = open_db(config)
-    if args.to_id:
-        to_snapshot = db.get_snapshot(conn, args.to_id)
-    else:
-        to_snapshot = db.latest_snapshot(conn, args.root)
-    if to_snapshot is None:
-        raise ValueError("no snapshots found")
-
-    if args.from_id:
-        from_snapshot = db.get_snapshot(conn, args.from_id)
-    elif args.since:
-        cutoff = time.time() - parse_duration(args.since)
-        from_snapshot = db.snapshot_at_or_before(conn, to_snapshot["root"], cutoff)
-        if from_snapshot is None:
-            rows = db.list_snapshots(conn, to_snapshot["root"])
-            from_snapshot = rows[-1] if rows else None
-    else:
-        from_snapshot = db.previous_snapshot(conn, to_snapshot)
-
-    if from_snapshot is None:
-        raise ValueError("need at least two snapshots")
-    if from_snapshot["id"] == to_snapshot["id"]:
-        raise ValueError("from and to are the same snapshot")
-    if from_snapshot["root"] != to_snapshot["root"]:
-        raise ValueError("snapshots have different roots")
-
-    filter_path = resolve_filter(args.path)
-    from_dirs = db.get_dirs(conn, from_snapshot["id"])
-    to_dirs = db.get_dirs(conn, to_snapshot["id"])
-    changes = compare_dirs(from_dirs, to_dirs, filter_path, args.limit)
+    to_snapshot = None
+    from_snapshot = None
+    changes = []
     file_changes = []
-    if args.files:
-        from_files = db.get_files(conn, from_snapshot["id"])
-        to_files = db.get_files(conn, to_snapshot["id"])
-        file_changes = compare_files(from_files, to_files, filter_path, args.limit)
-    total_delta = to_snapshot["total_size"] - from_snapshot["total_size"]
-    conn.close()
+    total_delta = 0
+    with open_db(config) as conn:
+        if args.to_id:
+            to_snapshot = db.get_snapshot(conn, args.to_id)
+        else:
+            to_snapshot = db.latest_snapshot(conn, args.root)
+        if to_snapshot is None:
+            raise ValueError("no snapshots found")
+
+        if args.from_id:
+            from_snapshot = db.get_snapshot(conn, args.from_id)
+        elif args.since:
+            cutoff = time.time() - parse_duration(args.since)
+            from_snapshot = db.snapshot_at_or_before(
+                conn, to_snapshot["root"], cutoff
+            )
+            if from_snapshot is None:
+                rows = db.list_snapshots(conn, to_snapshot["root"])
+                from_snapshot = rows[-1] if rows else None
+        else:
+            from_snapshot = db.previous_snapshot(conn, to_snapshot)
+
+        if from_snapshot is None:
+            raise ValueError("need at least two snapshots")
+        if from_snapshot["id"] == to_snapshot["id"]:
+            raise ValueError("from and to are the same snapshot")
+        if from_snapshot["root"] != to_snapshot["root"]:
+            raise ValueError("snapshots have different roots")
+
+        filter_path = resolve_filter(args.path)
+        from_dirs = db.get_dirs(conn, from_snapshot["id"])
+        to_dirs = db.get_dirs(conn, to_snapshot["id"])
+        changes = compare_dirs(from_dirs, to_dirs, filter_path, args.limit)
+        if args.files:
+            from_files = db.get_files(conn, from_snapshot["id"])
+            to_files = db.get_files(conn, to_snapshot["id"])
+            file_changes = compare_files(
+                from_files, to_files, filter_path, args.limit
+            )
+        total_delta = to_snapshot["total_size"] - from_snapshot["total_size"]
 
     if args.json:
         payload = {
@@ -420,49 +436,51 @@ def cmd_diff(args, config, color):
 
 
 def cmd_top(args, config, color):
-    conn = open_db(config)
-    if args.snapshot:
-        snapshot = db.get_snapshot(conn, args.snapshot)
-    else:
-        snapshot = db.latest_snapshot(conn, args.root)
-    if snapshot is None:
-        raise ValueError("no snapshots found")
-
+    snapshot = None
     filter_path = resolve_filter(args.path)
     rows = []
-    if args.files:
-        files = db.get_files(conn, snapshot["id"])
-        for path, row in files.items():
-            if not matches_filter(path, filter_path):
-                continue
-            rows.append({"path": path, "size": row["size"], "mtime": row["mtime"]})
-    else:
-        directories = db.get_dirs(conn, snapshot["id"])
-        base = filter_path or "."
-        prefix = "" if base == "." else base + "/"
-        for path, row in directories.items():
-            if path == base:
-                continue
-            if base == ".":
-                depth = path.count("/") + 1
-            else:
-                if not path.startswith(prefix):
+    with open_db(config) as conn:
+        if args.snapshot:
+            snapshot = db.get_snapshot(conn, args.snapshot)
+        else:
+            snapshot = db.latest_snapshot(conn, args.root)
+        if snapshot is None:
+            raise ValueError("no snapshots found")
+
+        if args.files:
+            files = db.get_files(conn, snapshot["id"])
+            for path, row in files.items():
+                if not matches_filter(path, filter_path):
                     continue
-                depth = path[len(prefix) :].count("/") + 1
-            if depth > args.depth:
-                continue
-            rows.append(
-                {
-                    "path": path,
-                    "size": row["size"],
-                    "files": row["files"],
-                    "dirs": row["dirs"],
-                    "mtime": row["mtime"],
-                }
-            )
-    rows.sort(key=lambda item: item["size"], reverse=True)
-    rows = rows[: args.limit]
-    conn.close()
+                rows.append(
+                    {"path": path, "size": row["size"], "mtime": row["mtime"]}
+                )
+        else:
+            directories = db.get_dirs(conn, snapshot["id"])
+            base = filter_path or "."
+            prefix = "" if base == "." else base + "/"
+            for path, row in directories.items():
+                if path == base:
+                    continue
+                if base == ".":
+                    depth = path.count("/") + 1
+                else:
+                    if not path.startswith(prefix):
+                        continue
+                    depth = path[len(prefix) :].count("/") + 1
+                if depth > args.depth:
+                    continue
+                rows.append(
+                    {
+                        "path": path,
+                        "size": row["size"],
+                        "files": row["files"],
+                        "dirs": row["dirs"],
+                        "mtime": row["mtime"],
+                    }
+                )
+        rows.sort(key=lambda item: item["size"], reverse=True)
+        rows = rows[: args.limit]
 
     if args.json:
         payload = {
@@ -500,14 +518,13 @@ def print_git(info):
 
 
 def cmd_why(args, config, color):
-    conn = open_db(config)
-    info = why.explain(
-        conn,
-        args.path,
-        snapshot_id=args.snapshot,
-        include_refs=not args.no_refs,
-    )
-    conn.close()
+    with open_db(config) as conn:
+        info = why.explain(
+            conn,
+            args.path,
+            snapshot_id=args.snapshot,
+            include_refs=not args.no_refs,
+        )
 
     if args.json:
         print(json.dumps(info, indent=2, ensure_ascii=False))
@@ -561,7 +578,6 @@ def cmd_why(args, config, color):
 
 
 def cmd_prune(args, config, color):
-    conn = open_db(config)
     keep = args.keep
     older_than = None
     if args.older_than:
@@ -570,11 +586,11 @@ def cmd_prune(args, config, color):
         keep = 20
     if keep is not None and keep < 1:
         raise ValueError("keep must be at least 1")
-    deleted = db.prune_snapshots(conn, keep=keep, older_than=older_than)
-    if args.vacuum:
-        db.vacuum(conn)
-    db_size = db.database_size(conn)
-    conn.close()
+    with open_db(config) as conn:
+        deleted = db.prune_snapshots(conn, keep=keep, older_than=older_than)
+        if args.vacuum:
+            db.vacuum(conn)
+        db_size = db.database_size(conn)
 
     if args.json:
         print(
@@ -591,16 +607,17 @@ def cmd_prune(args, config, color):
 
 
 def cmd_chart(args, config, color):
-    conn = open_db(config)
-    if args.root:
-        root = db.normalize_root(args.root)
-    else:
-        latest = db.latest_snapshot(conn)
-        if latest is None:
-            raise ValueError("no snapshots found")
-        root = latest["root"]
-    rows = db.list_snapshots(conn, root)
-    conn.close()
+    root = None
+    rows = []
+    with open_db(config) as conn:
+        if args.root:
+            root = db.normalize_root(args.root)
+        else:
+            latest = db.latest_snapshot(conn)
+            if latest is None:
+                raise ValueError("no snapshots found")
+            root = latest["root"]
+        rows = db.list_snapshots(conn, root)
     rows = list(reversed(rows))
     if args.days > 0:
         cutoff = time.time() - args.days * 86400
@@ -641,20 +658,21 @@ def notify(message):
 
 
 def cmd_watch(args, config, color):
-    conn = open_db(config)
-    if args.root:
-        root = db.normalize_root(args.root)
-    else:
-        latest = db.latest_snapshot(conn)
-        if latest is None:
-            raise ValueError("no snapshots found")
-        root = latest["root"]
-
     since = parse_duration(args.since)
     max_growth = parse_size(args.max_growth)
     interval = parse_duration(args.interval)
     if interval < 1:
         raise ValueError("interval must be at least 1s")
+
+    conn = db.connect(config.db_path)
+    if args.root:
+        root = db.normalize_root(args.root)
+    else:
+        latest = db.latest_snapshot(conn)
+        if latest is None:
+            conn.close()
+            raise ValueError("no snapshots found")
+        root = latest["root"]
 
     alerted = False
     try:
