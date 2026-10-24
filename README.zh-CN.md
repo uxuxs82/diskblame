@@ -14,7 +14,7 @@
 
 `du` 和 `ncdu` 回答“现在什么最大”。它们不回答“上周以来什么变大了”，除非你保存完整副本或记住数字。`diskblame` 为每个路径保存少量数字，之后再比较。
 
-它面向存储已经很紧张的场景：手机、小型 VPS 或磁盘快满的笔记本。数据库只存元数据，所以 100 GiB 目录的快照通常只有几 MB。
+它面向存储已经很紧张的场景：台式机或磁盘快满的笔记本。数据库只存元数据，所以 100 GiB 目录的快照通常只有几 MB。
 
 | 工具 | 保存历史 | 解释路径 |
 | --- | --- | --- |
@@ -36,13 +36,6 @@ pipx install git+https://github.com/uxuxs82/diskblame.git
 ```sh
 git clone https://github.com/uxuxs82/diskblame.git
 cd diskblame
-pip install .
-```
-
-在 Termux 上：
-
-```sh
-pkg install python
 pip install .
 ```
 

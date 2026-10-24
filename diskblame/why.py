@@ -114,7 +114,7 @@ EXTENSION_TYPES = {
     ".avif": "AVIF image",
     ".pdf": "PDF document",
     ".zip": "ZIP archive",
-    ".apk": "Android package",
+    ".apk": "APK package",
     ".jar": "Java archive",
     ".glb": "glTF binary",
     ".mp4": "MP4 video",
@@ -166,7 +166,7 @@ def detect_type(path):
             if label == "ZIP archive":
                 suffix = path.suffix.lower()
                 if suffix == ".apk":
-                    return "Android package"
+                    return "APK package"
                 if suffix == ".jar":
                     return "Java archive"
             return label

@@ -11,7 +11,7 @@ python -m unittest discover -v
 ## guidelines
 
 - keep runtime dependencies at zero
-- keep the CLI usable on Termux and desktop systems
+- keep the CLI usable on linux, macos, and windows
 - update `README.md` and the translations when behavior changes
 - include the OS, Python version, command, and output in bug reports
 

@@ -1,5 +1,10 @@
 # changelog
 
+## 0.1.2
+
+- remove the mobile notification option
+- desktop-focused docs and metadata
+
 ## 0.1.1
 
 - readme translations: russian, spanish, simplified chinese
@@ -12,4 +17,4 @@
 - `snap`, `diff`, `top`, `why`, `chart`, `watch`, `prune`, `config`
 - sqlite metadata snapshots
 - no runtime dependencies
-- termux, linux, macos, windows
+- linux, macos, windows

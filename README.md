@@ -14,7 +14,7 @@ It never copies your files.
 
 `du` and `ncdu` answer "what is big now". They do not answer "what got big since last week" unless you keep full copies or remember the numbers. `diskblame` stores a few numbers per path and compares them later.
 
-It is built for the case where storage is already tight: a phone, a small VPS, or a laptop with a full disk. The database is metadata only, so a snapshot of a 100 GiB directory usually fits in a few megabytes.
+It is built for the case where storage is already tight: a desktop or a laptop with a full disk. The database is metadata only, so a snapshot of a 100 GiB directory usually fits in a few megabytes.
 
 | tool | keeps history | explains a path |
 | --- | --- | --- |
@@ -36,13 +36,6 @@ Or from a local checkout:
 ```sh
 git clone https://github.com/uxuxs82/diskblame.git
 cd diskblame
-pip install .
-```
-
-On Termux:
-
-```sh
-pkg install python
 pip install .
 ```
 

@@ -1,9 +1,7 @@
 import argparse
 import json
 import os
-import shutil
 import sqlite3
-import subprocess
 import sys
 import time
 from contextlib import contextmanager
@@ -137,7 +135,6 @@ def build_parser():
     watch.add_argument("--interval", default="1h")
     watch.add_argument("--once", action="store_true")
     watch.add_argument("--snap", action="store_true", help="take a snapshot on each check")
-    watch.add_argument("--notify", action="store_true", help="use termux-notification")
     watch.add_argument("--json", action="store_true")
     watch.set_defaults(func=cmd_watch)
 
@@ -641,22 +638,6 @@ def cmd_chart(args, config, color):
     return 0
 
 
-def notify(message):
-    command = shutil.which("termux-notification")
-    if not command:
-        print("termux-notification not found", file=sys.stderr)
-        return False
-    try:
-        subprocess.run(
-            [command, "--title", "diskblame", "--content", message],
-            capture_output=True,
-            timeout=10,
-        )
-        return True
-    except (OSError, subprocess.SubprocessError):
-        return False
-
-
 def cmd_watch(args, config, color):
     since = parse_duration(args.since)
     max_growth = parse_size(args.max_growth)
@@ -731,8 +712,6 @@ def cmd_watch(args, config, color):
                     )
                 else:
                     print(color.red(f"alert: {message}"))
-                if args.notify:
-                    notify(message)
 
             if args.once:
                 break

@@ -14,7 +14,7 @@ Nunca copia tus archivos.
 
 `du` y `ncdu` responden "qué es grande ahora". No responden "qué creció desde la semana pasada" a menos que guardes copias completas o recuerdes los números. `diskblame` guarda unos pocos números por ruta y los compara después.
 
-Está pensado para cuando el almacenamiento ya está justo: un teléfono, un VPS pequeño o un portátil con el disco lleno. La base solo tiene metadatos, así que una instantánea de un directorio de 100 GiB suele ocupar unos pocos megabytes.
+Está pensado para cuando el almacenamiento ya está justo: un ordenador de escritorio o un portátil con el disco lleno. La base solo tiene metadatos, así que una instantánea de un directorio de 100 GiB suele ocupar unos pocos megabytes.
 
 | herramienta | guarda historial | explica una ruta |
 | --- | --- | --- |
@@ -36,13 +36,6 @@ O desde una copia local:
 ```sh
 git clone https://github.com/uxuxs82/diskblame.git
 cd diskblame
-pip install .
-```
-
-En Termux:
-
-```sh
-pkg install python
 pip install .
 ```
 
