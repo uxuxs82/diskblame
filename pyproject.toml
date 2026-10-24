@@ -41,6 +41,8 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/uxuxs82/diskblame"
 Repository = "https://github.com/uxuxs82/diskblame"
+Changelog = "https://github.com/uxuxs82/diskblame/blob/main/CHANGELOG.md"
+Issues = "https://github.com/uxuxs82/diskblame/issues"
 
 [project.scripts]
 diskblame = "diskblame.cli:main"
