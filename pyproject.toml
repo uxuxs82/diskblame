@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "diskblame"
+version = "0.1.0"
+description = "Track what grows on your disk and why."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "uxuxs82"}]
+keywords = ["disk", "storage", "cli", "sqlite", "termux", "du"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Filesystems",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/uxuxs82/diskblame"
+Repository = "https://github.com/uxuxs82/diskblame"
+
+[project.scripts]
+diskblame = "diskblame.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["diskblame*"]
