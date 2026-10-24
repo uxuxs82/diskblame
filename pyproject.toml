@@ -10,7 +10,20 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [{name = "uxuxs82"}]
-keywords = ["disk", "storage", "cli", "sqlite", "termux", "du"]
+keywords = [
+    "disk",
+    "disk-usage",
+    "disk-space",
+    "disk-analyzer",
+    "storage",
+    "filesystem",
+    "cleanup",
+    "cli",
+    "sqlite",
+    "termux",
+    "du",
+    "ncdu",
+]
 classifiers = [
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",

@@ -2,6 +2,8 @@
 
 ![ci](https://github.com/uxuxs82/diskblame/actions/workflows/ci.yml/badge.svg)
 
+read in: [english](README.md) | [русский](README.ru.md) | [español](README.es.md) | [中文](README.zh-CN.md)
+
 `diskblame` keeps a lightweight history of disk usage and tells you what changed.
 
 `du` and `ncdu` show the current state. `diskblame` stores metadata snapshots in SQLite, so you can ask what grew since last week, which directory is responsible, and why a file is still there.
@@ -145,6 +147,10 @@ path = "~/.local/share/diskblame/diskblame.db"
 - Duplicate detection compares stored files with the same size, then hashes them. Large files use the first and last 1 MiB plus the size.
 - Reference search uses `git grep` inside a repository and a bounded text-file scan outside one.
 - `watch` is a foreground loop. Run it in tmux or a service manager if you want it to stay alive.
+
+## contributing
+
+issues and pull requests are welcome. see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
