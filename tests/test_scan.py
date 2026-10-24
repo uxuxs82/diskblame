@@ -55,6 +55,30 @@ class ScanTests(unittest.TestCase):
         self.assertTrue(should_exclude("cache", "dir/cache", ["dir/cache"]))
         self.assertFalse(should_exclude("keep.txt", "keep.txt", [".git"]))
 
+    def test_symlink_skipped_by_default(self):
+        try:
+            os.symlink(self.root / "dir", self.root / "link")
+        except OSError:
+            self.skipTest("symlinks are not available")
+        result = scan(self.root, exclude=[".git"], min_file_size=1)
+        directories = {row[0] for row in result.dirs}
+        self.assertNotIn("link", directories)
+        self.assertEqual(result.total_files, 3)
+
+    def test_follow_symlinks_does_not_duplicate(self):
+        try:
+            os.symlink(self.root / "dir", self.root / "link")
+        except OSError:
+            self.skipTest("symlinks are not available")
+        result = scan(
+            self.root,
+            exclude=[".git"],
+            min_file_size=1,
+            follow_symlinks=True,
+        )
+        self.assertEqual(result.total_files, 3)
+        self.assertEqual(result.total_dirs, 4)
+
     def test_missing_root(self):
         with self.assertRaises(FileNotFoundError):
             scan(self.root / "missing")

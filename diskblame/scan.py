@@ -70,19 +70,15 @@ def scan(root, exclude=None, min_file_size=1024**2, follow_symlinks=False):
                 if should_exclude(name, relative, exclude):
                     continue
                 try:
-                    if entry.is_symlink():
-                        if not follow_symlinks:
-                            continue
-                        real = os.path.realpath(entry.path)
-                        if real in visited_dirs:
-                            continue
-                        visited_dirs.add(real)
+                    if entry.is_symlink() and not follow_symlinks:
+                        continue
 
                     if entry.is_dir(follow_symlinks=follow_symlinks):
-                        real = os.path.realpath(entry.path)
-                        if real in visited_dirs:
-                            continue
-                        visited_dirs.add(real)
+                        if follow_symlinks:
+                            real = os.path.realpath(entry.path)
+                            if real in visited_dirs:
+                                continue
+                            visited_dirs.add(real)
                         stat = entry.stat(follow_symlinks=follow_symlinks)
                         directories[relative] = [0, 0, 0, stat.st_mtime]
                         stack.append((relative, entry.path))
