@@ -1,5 +1,7 @@
 # diskblame
 
+![ci](https://github.com/uxuxs82/diskblame/actions/workflows/ci.yml/badge.svg)
+
 `diskblame` keeps a lightweight history of disk usage and tells you what changed.
 
 `du` and `ncdu` show the current state. `diskblame` stores metadata snapshots in SQLite, so you can ask what grew since last week, which directory is responsible, and why a file is still there.
@@ -107,7 +109,7 @@ A snapshot stores:
 - one row per file at or above `min_file_size`, default 1 MiB
 - snapshot metadata: root, time, total size, file count, directory count, elapsed time
 
-Directory totals include all files, including those below the file threshold. The file threshold only limits which individual files are stored for `top --files`, `diff --files`, and duplicate checks.
+Directory totals include all files, including those below the file threshold. The file threshold only limits which individual files are stored for `top --files`, `diff --files`, and duplicate checks. `diff --files` reports size changes, not content changes.
 
 Hard links are counted once in directory totals. Symbolic links are skipped unless `--follow-symlinks` is used. Unreadable entries are counted and reported, not treated as zero.
 
