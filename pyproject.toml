@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "diskblame"
-version = "0.1.0"
+version = "0.1.1"
 description = "Disk usage history: track what grows, diff snapshots, and explain files."
 readme = "README.md"
 requires-python = ">=3.11"
